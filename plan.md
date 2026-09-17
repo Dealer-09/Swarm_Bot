@@ -1,5 +1,15 @@
 I want you to act as the systems engineer for a ground-based proof of concept for my autonomous swarm-drone project.
 
+> [!WARNING]
+> **SYSTEMS ENGINEER UPDATE (Sept 2026):** 
+> This document serves as the original project specification and high-level goal mapping. 
+> However, **several hardware assumptions in this document are INCORRECT** based on physical testing:
+> 1. **Motor Pins:** The AlphaBot2-Ar does *not* use digital pins D4-D7 for motors. It uses Analog pins (A0-A3) for direction and D5/D6 for PWM.
+> 2. **Power Architecture:** Running YOLO on all 4 cores of the Pi 4 will cause a brownout and Wi-Fi disconnect. Inference must be throttled to 1-2 threads.
+> 3. **Model Choice:** We are using **YOLO11n exported to NCNN (FP16)** running via a custom Python wrapper, *not* PyTorch or Ultralytics natively.
+> 
+> **For all ground-truth technical details, pin mappings, and current phase progress, refer exclusively to the `README.md`.**
+
 Do NOT start coding immediately.
 
 First perform a deep technical audit and research pass, then produce a complete implementation plan, hardware architecture, communication protocol, software architecture, testing strategy, and only after that recommend the first code to write.
