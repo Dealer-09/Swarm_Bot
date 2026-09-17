@@ -63,3 +63,42 @@ Running computer vision models (YOLO) forces the Raspberry Pi 4 CPU to 100% util
 *   [ ] **Phase 5:** Navigation Loop (PID control to keep person in frame center).
 *   [ ] **Phase 6:** XBee RF Coordination (Broadcasting target data between swarm members).
 *   [ ] **Phase 7:** Swarm Reaction (Robot B reacts to Robot A's vision data).
+
+## Repository Structure
+
+Below is a breakdown of the codebase and what each directory contains:
+
+```text
+Swarm_Bot/
+|-- plan.md                                # The master 1000-line project specification and phase plan.
+|-- README.md                              # This file (Hardware info, pin mappings, project status).
+|-- .gitignore                             # Git ignore rules for Python, PlatformIO, and temp files.
+|-- yolo11n.pt                             # The original PyTorch YOLO11n model weights.
+|
+|-- phase0_setup/                          # Scripts for initial robot provisioning
+|   |-- install_deps.sh                    # Bash script to create Python venvs and install ncnn/opencv on the Pis.
+|   |-- verify_install.sh                  # Verifies Python packages are installed correctly.
+|   |-- check_hardware.sh                  # Verifies USB devices (webcam, Arduino, XBee) are visible to Linux.
+|   |-- identify_ports.sh                  # Determines which /dev/ttyUSB* is the Arduino and which is the XBee.
+|   |-- export_yolo_ncnn.py                # Windows script used to convert the PyTorch model to NCNN format.
+|   |-- deploy_phase0.ps1                  # PowerShell script to SCP files to the robots.
+|   |-- yolo11n_ncnn_model/                # The exported YOLO NCNN model directory
+|       |-- model.ncnn.bin                 # NCNN binary weights (5.1MB)
+|       |-- model.ncnn.param               # NCNN network architecture graph
+|       |-- metadata.yaml                  # Model metadata (classes, image size)
+|
+|-- phase1_arduino/                        # Arduino firmware for motor control
+|   |-- platformio.ini                     # PlatformIO build configuration for Arduino Uno.
+|   |-- sketch_pi_motor_bridge/
+|       |-- sketch_pi_motor_bridge.ino     # The final, verified firmware that listens to the Pi over serial and drives motors.
+|   |-- sketch_motor_diag3/                # Diagnostic firmware used to discover the correct A0-A3 pin mappings.
+|
+|-- phase3_vision/                         # Live video streaming and AI testing
+|   |-- yolo_stream.py                     # Python script running on the Pi that streams the webcam + YOLO boxes to a web browser.
+|
+|-- shared/                                # Code shared between both Robot A and Robot B
+|   |-- yolo_ncnn.py                       # Custom Python wrapper for NCNN inference (handles image resizing, decoding, and NMS).
+|
+|-- robot_a/                               # Future directory: Main tracking loop for Robot A (Leader)
+|-- robot_b/                               # Future directory: Main response loop for Robot B (Follower)
+```
