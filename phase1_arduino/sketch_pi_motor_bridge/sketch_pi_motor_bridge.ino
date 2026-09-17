@@ -4,7 +4,7 @@
  *
  * Purpose:
  *   Receives ASCII motor commands from the Raspberry Pi over USB serial
- *   and drives the AlphaBot2-Ar motors (TB6612FNG via pins D4-D7).
+ *   and drives the AlphaBot2-Ar motors (TB6612FNG via proper dual-direction pins).
  *
  * Command Protocol (Pi → Arduino, 115200 baud, newline terminated):
  *   M,<leftSpeed>,<leftDir>,<rightSpeed>,<rightDir>
@@ -12,35 +12,23 @@
  *   leftSpeed / rightSpeed : 0–255
  *   leftDir  / rightDir   : F (forward) | B (backward)
  *
- * Examples:
- *   M,150,F,150,F   → move forward at speed 150
- *   M,150,B,150,B   → move backward at speed 150
- *   M,120,F,120,B   → spin left (right fwd, left bwd)
- *   M,120,B,120,F   → spin right
- *   M,0,F,0,F       → stop both motors
- *
- * Response:
- *   OK              → command accepted and applied
- *   ERR:<reason>    → malformed command
- *
- * Hardware (from pins.h / pin_mapping.csv):
- *   Motor A (Left)  — PWM: D5,  DIR: D4
- *   Motor B (Right) — PWM: D6,  DIR: D7
- *
- * Safety:
- *   - If no command received within WATCHDOG_MS, motors stop automatically.
- *   - All speeds clamped to [0, MAX_SPEED].
- *
- * @author Swarm POC
+ * Hardware (Verified via AlphaBot2-Ar jumper matrix):
+ *   Motor A (Left)  — PWM: D6, AIN1: A1, AIN2: A0
+ *   Motor B (Right) — PWM: D5, BIN1: A2, BIN2: A3
  */
 
+#include <Arduino.h>
+
 // ============================================================================
-// Pin Definitions (matches your pin_mapping.csv exactly)
+// Pin Definitions (Verified from hardware photos)
 // ============================================================================
-#define MOTOR_A_PWM_PIN   5   // Left motor speed  (PWM)
-#define MOTOR_A_DIR_PIN   4   // Left motor direction
-#define MOTOR_B_PWM_PIN   6   // Right motor speed (PWM)
-#define MOTOR_B_DIR_PIN   7   // Right motor direction
+#define PWMA 6
+#define AIN1 A1
+#define AIN2 A0
+
+#define PWMB 5
+#define BIN1 A2
+#define BIN2 A3
 
 // ============================================================================
 // Safety Config
@@ -60,15 +48,29 @@ String inputBuffer = "";
 // Motor Helpers
 // ============================================================================
 
-void setMotor(int pwmPin, int dirPin, int speed, char dir) {
+void setMotor(int pwmPin, int in1Pin, int in2Pin, int speed, char dir) {
   speed = constrain(abs(speed), 0, MAX_SPEED);
-  digitalWrite(dirPin, (dir == 'F') ? HIGH : LOW);
+  
+  if (dir == 'F') {
+    digitalWrite(in1Pin, HIGH);
+    digitalWrite(in2Pin, LOW);
+  } else {
+    digitalWrite(in1Pin, LOW);
+    digitalWrite(in2Pin, HIGH);
+  }
+  
   analogWrite(pwmPin, speed);
 }
 
 void stopMotors() {
-  analogWrite(MOTOR_A_PWM_PIN, 0);
-  analogWrite(MOTOR_B_PWM_PIN, 0);
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, LOW);
+  analogWrite(PWMA, 0);
+
+  digitalWrite(BIN1, LOW);
+  digitalWrite(BIN2, LOW);
+  analogWrite(PWMB, 0);
+  
   motorsRunning = false;
 }
 
@@ -106,9 +108,9 @@ void parseCommand(const String& cmd) {
     return;
   }
 
-  // Apply
-  setMotor(MOTOR_A_PWM_PIN, MOTOR_A_DIR_PIN, leftSpeed,  leftDir);
-  setMotor(MOTOR_B_PWM_PIN, MOTOR_B_DIR_PIN, rightSpeed, rightDir);
+  // Apply (Assuming A is left and B is right)
+  setMotor(PWMA, AIN1, AIN2, leftSpeed,  leftDir);
+  setMotor(PWMB, BIN1, BIN2, rightSpeed, rightDir);
 
   motorsRunning = (leftSpeed > 0 || rightSpeed > 0);
   lastCmdTime   = millis();
@@ -123,15 +125,18 @@ void parseCommand(const String& cmd) {
 void setup() {
   Serial.begin(SERIAL_BAUD);
 
-  pinMode(MOTOR_A_PWM_PIN, OUTPUT);
-  pinMode(MOTOR_A_DIR_PIN, OUTPUT);
-  pinMode(MOTOR_B_PWM_PIN, OUTPUT);
-  pinMode(MOTOR_B_DIR_PIN, OUTPUT);
+  pinMode(PWMA, OUTPUT);
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  
+  pinMode(PWMB, OUTPUT);
+  pinMode(BIN1, OUTPUT);
+  pinMode(BIN2, OUTPUT);
 
   stopMotors();
   lastCmdTime = millis();
 
-  Serial.println("READY:swarm_motor_bridge_v1");
+  Serial.println("READY:swarm_motor_bridge_v2");
 }
 
 // ============================================================================
